@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <climits>
 
 #include "adjacencylist.h"
 //#include "global.h"
@@ -47,8 +48,12 @@ void AdjacencyList::set_thread_id(int thread_id) {
     this->thread_id = thread_id;
 }
 
+void AdjacencyList::set_vertex_rank(int index, int rank) {
+    vertex_path_cost.at(index) = rank;
+}
+
 void AdjacencyList::set_vertex_rank(int index, function<double ()> const &calculate_rank) {
-    vertex_rank.at(index) = calculate_rank();
+    vertex_path_cost.at(index) = calculate_rank();
 }
 
 void AdjacencyList::insert_edge(int src, int dst) {
@@ -59,12 +64,12 @@ void AdjacencyList::insert_edge(int src, int dst) {
     if(incoming_edges.empty()) {
         incoming_edges.resize(temp + 1, vector<int>());
         outgoing_edges.resize(temp + 1, vector<int>());
-        vertex_rank.resize(temp + 1, 1.0);
+        vertex_path_cost.resize(temp + 1, INT_MAX);
     } 
     else if (incoming_edges.size() <= src || incoming_edges.size() <= dst) {
         incoming_edges.resize(temp + 1, vector<int>());
         outgoing_edges.resize(temp + 1, vector<int>());
-        vertex_rank.resize(temp + 1, 1.0);
+        vertex_path_cost.resize(temp + 1, INT_MAX);
     }
     
     incoming_edges.at(dst).push_back(src);
@@ -85,14 +90,20 @@ void AdjacencyList::print_list() {
     }
 }
 
-void AdjacencyList::print_one_list(int index) {
+void AdjacencyList::print_one_incoming_list(int index) {
     for(int i = 0; i < incoming_edges[index].size(); i++)
         cout << incoming_edges[index].at(i) << " ";
     cout << endl;
 }
 
+void AdjacencyList::print_one_outgoing_list(int index) {
+    for(int i = 0; i < outgoing_edges[index].size(); i++)
+        cout << outgoing_edges[index].at(i) << " ";
+    cout << endl;
+}
+
 void AdjacencyList::print_vertex_ranks() {
-    for(int i = 0; i < vertex_rank.size(); i++)
-        cout << i << "\t" << vertex_rank.at(i) << endl;
+    for(int i = 0; i < vertex_path_cost.size(); i++)
+        cout << i << "\t" << vertex_path_cost.at(i) << endl;
     cout << endl;
 }

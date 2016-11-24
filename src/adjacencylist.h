@@ -19,19 +19,21 @@ class AdjacencyList : public ThreadData {
         short get_thread_id() const;
         void set_thread_id(int);
         
+        void set_vertex_rank(int, int);
         void set_vertex_rank(int, function<double ()> const&);
         
         void insert_edge(int, int);
         
         void print_list();
-        void print_one_list(int);
+        void print_one_incoming_list(int);
+        void print_one_outgoing_list(int);
         void print_vertex_ranks();
     
     // temporary
     // private:
         vector <vector<int>> incoming_edges;
         vector <vector<int>> outgoing_edges;
-        vector <double> vertex_rank;
+        vector <double> vertex_path_cost;
         
         char buff[100];
 };
