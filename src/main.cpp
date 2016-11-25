@@ -25,13 +25,14 @@ void rank_distribution(AdjacencyList& graph) {
     vector <bool> discovered_vertex (graph.vertex_path_cost.size(), false);
     int difference = 1, max_difference = 1;
     while (max_difference > 0) {
+        max_difference = 0;
         for (int i = 0; i < graph.outgoing_edges.size(); i++) {
             for_each(graph.outgoing_edges[i].begin(), graph.outgoing_edges[i].end(), [&](int &j) {
                 int curr_path_cost = graph.vertex_path_cost.at(j);
                 
                 if (j == 0) return;
                 
-                if (discovered_vertex.at(j) == false) {
+                if (discovered_vertex.at(j) == false && graph.vertex_path_cost.at(i) != INT_MAX) {
                     graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
                     discovered_vertex.at(j) = true;
                 }
@@ -40,11 +41,13 @@ void rank_distribution(AdjacencyList& graph) {
                 }
                 
                 difference = abs(curr_path_cost - graph.vertex_path_cost.at(j));
-                if (difference < max_difference) {
+                if (difference > max_difference) {
                     max_difference = difference;
                 }
-                
-                graph.print_vertex_ranks();
+                // cout << "Updating vertex " << j << " from " << i << endl;
+                // cout << "Max diff: " << max_difference << endl;
+                // cout << "Diff: " << difference << endl;
+                // graph.print_vertex_ranks();
             });
         }
     }
