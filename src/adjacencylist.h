@@ -5,8 +5,8 @@
 #include <tuple>
 #include <vector>
 #include <functional>
-
 #include "thread_data.h"
+
 using namespace std;
 
 class AdjacencyList : public ThreadData {
@@ -29,12 +29,11 @@ class AdjacencyList : public ThreadData {
         void print_one_outgoing_list(int);
         void print_vertex_ranks();
     
-    // temporary
-    // private:
         vector <vector<int>> incoming_edges;
         vector <vector<int>> outgoing_edges;
         vector <double> vertex_path_cost;
         
+    private:
         char buff[100];
 };
 

@@ -27,7 +27,7 @@ copy:
 	cp -f ./Makefile $(BUILD_DIR)/Makefile
 	
 check:
-	./$(EXECUTABLE) ${ARGS}
+	./$(EXECUTABLE) ${ARGS1} ${ARGS2}
 	
 check_d:
-	gdb --args $(EXECUTABLE) ${ARGS}
+	gdb --args $(EXECUTABLE) ${ARGS1} ${ARGS2}

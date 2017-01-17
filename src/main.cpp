@@ -20,6 +20,12 @@
 using namespace std;
 using namespace std::chrono;
 
+struct partitions {
+    int l_bound;
+    int r_bound;
+    short thread_id;
+};
+
 void rank_distribution(AdjacencyList& graph) {
     graph.set_vertex_rank(0,0);
     vector <bool> discovered_vertex (graph.vertex_path_cost.size(), false);
@@ -44,20 +50,66 @@ void rank_distribution(AdjacencyList& graph) {
                 if (difference > max_difference) {
                     max_difference = difference;
                 }
-                // cout << "Updating vertex " << j << " from " << i << endl;
-                // cout << "Max diff: " << max_difference << endl;
-                // cout << "Diff: " << difference << endl;
-                // graph.print_vertex_ranks();
             });
         }
     }
 }
 
 int main(int argc, char *argv[]) {
-    string dataset = argv[1];
-    AdjacencyList graph (dataset);
+    if(argc != 3) {
+        cout << "Not enough arguments.\n Requires [dataset] "
+             << "[number of threads].\n";
+        return -1;
+    }
     
-    rank_distribution(graph);
-    graph.print_vertex_ranks();
+    string dataset = argv[1];
+    AdjacencyList graph(dataset);
+    
+    int num_threads = 0, remaining_edges = 0;
+    
+    if(atoi(argv[2]) == 0) num_threads = 1;
+    else if(atoi(argv[2]) > thread::hardware_concurrency()) {
+        cout << "num_threads set to maximum supported concurrent threads"
+             << " (" << thread::hardware_concurrency() << ") \n";
+        num_threads = thread::hardware_concurrency() - 1;
+    }
+    else num_threads = atoi(argv[2]);
+    
+    if (graph.incoming_edges.size() % num_threads)
+        remaining_edges = graph.incoming_edges.size() % num_threads;
+    
+    int num_edges = graph.incoming_edges.size() / num_threads;
+    
+    vector<partitions> thread_distribution(num_threads);
+    vector<thread> threads(num_threads);
+    
+    if (num_threads == 1) {
+        rank_distribution(graph);
+        graph.print_vertex_ranks();
+        return 0;
+    }
+    else {
+        for (int i = 0, edges_dist = 0; i < num_threads; i++, edges_dist++) {
+            thread_distribution[i].thread_id = i;
+            thread_distribution[i].l_bound = edges_dist;
+            if (remaining_edges != 0) {
+                thread_distribution[i].r_bound = edges_dist + num_edges;
+                edges_dist += num_edges;
+                remaining_edges--;
+            }
+            else {
+                thread_distribution[i].r_bound = edges_dist + num_edges - 1;
+                edges_dist += num_edges - 1;
+            }
+        }
+    }
+    
+    for(int iter = 0; iter < thread_distribution.size(); iter++) {
+        cout << "\n Thread Num: " << thread_distribution.at(iter).thread_id
+             << "\t" << thread_distribution.at(iter).l_bound
+             << "\t" << thread_distribution.at(iter).r_bound;
+    }
+    
+    
+    return 0;
 }
-
