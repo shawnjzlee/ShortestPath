@@ -8,7 +8,7 @@
 #include <climits>
 
 #include "adjacencylist.h"
-//#include "global.h"
+#include "global.h"
 
 using namespace std;
 

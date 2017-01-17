@@ -16,6 +16,7 @@
 #include <climits>
 
 #include "adjacencylist.h"
+#include "global.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -26,7 +27,9 @@ struct partitions {
     short thread_id;
 };
 
-void rank_distribution(AdjacencyList& graph) {
+map<int, unique_ptr<mutex>> mutex_map;
+
+void rank_distribution(AdjacencyList& graph, vector<partitions> thread_distribution) {
     graph.set_vertex_rank(0,0);
     vector <bool> discovered_vertex (graph.vertex_path_cost.size(), false);
     int difference = 1, max_difference = 1;
@@ -84,7 +87,12 @@ int main(int argc, char *argv[]) {
     vector<thread> threads(num_threads);
     
     if (num_threads == 1) {
-        rank_distribution(graph);
+        thread_distribution.at(0).thread_id = 0;
+        thread_distribution.at(0).l_bound = 0;
+        thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
+        mutex_map.emplace(0, make_unique<mutex>()).first;
+        
+        rank_distribution(graph, thread_distribution);
         graph.print_vertex_ranks();
         return 0;
     }
@@ -101,15 +109,22 @@ int main(int argc, char *argv[]) {
                 thread_distribution[i].r_bound = edges_dist + num_edges - 1;
                 edges_dist += num_edges - 1;
             }
+            
+            mutex_map.emplace(i, make_unique<mutex>()).first;
+            threads[i] = thread(rank_distribution, ref(graph), thread_distribution);
         }
     }
     
-    for(int iter = 0; iter < thread_distribution.size(); iter++) {
-        cout << "\n Thread Num: " << thread_distribution.at(iter).thread_id
-             << "\t" << thread_distribution.at(iter).l_bound
-             << "\t" << thread_distribution.at(iter).r_bound;
-    }
+    // for(int iter = 0; iter < thread_distribution.size(); iter++) {
+    //     cout << "\n Thread Num: " << thread_distribution.at(iter).thread_id
+    //          << "\t" << thread_distribution.at(iter).l_bound
+    //          << "\t" << thread_distribution.at(iter).r_bound;
+    // }
     
+    if(num_threads != 1)
+        for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
+    
+    graph.print_vertex_ranks();
     
     return 0;
 }
