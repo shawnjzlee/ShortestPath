@@ -9,7 +9,7 @@ def compare(file1, file2):
             line2_arr = line2.split()
             
             # if not (isinstance(line1_arr[1], float) or isinstance(line2_arr[1], float)):
-            if (float(line1_arr[1]) - float(line2_arr[1])) < 1.0:
+            if (float(line1_arr[1]) - float(line2_arr[1])) > 0:
                 continue
             else:
                 total_difference += 1

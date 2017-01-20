@@ -24,7 +24,6 @@ using namespace std::chrono;
 struct partitions {
     int l_bound;
     int r_bound;
-    short thread_id;
 };
 
 map<int, unique_ptr<mutex>> mutex_map;
@@ -87,7 +86,6 @@ int main(int argc, char *argv[]) {
     vector<thread> threads(num_threads);
     
     if (num_threads == 1) {
-        thread_distribution.at(0).thread_id = 0;
         thread_distribution.at(0).l_bound = 0;
         thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
         mutex_map.emplace(0, make_unique<mutex>()).first;
@@ -98,7 +96,6 @@ int main(int argc, char *argv[]) {
     }
     else {
         for (int i = 0, edges_dist = 0; i < num_threads; i++, edges_dist++) {
-            thread_distribution[i].thread_id = i;
             thread_distribution[i].l_bound = edges_dist;
             if (remaining_edges != 0) {
                 thread_distribution[i].r_bound = edges_dist + num_edges;
@@ -116,7 +113,7 @@ int main(int argc, char *argv[]) {
     }
     
     // for(int iter = 0; iter < thread_distribution.size(); iter++) {
-    //     cout << "\n Thread Num: " << thread_distribution.at(iter).thread_id
+    //     cout << "\n Thread Num: " << iter
     //          << "\t" << thread_distribution.at(iter).l_bound
     //          << "\t" << thread_distribution.at(iter).r_bound;
     // }
