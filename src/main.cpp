@@ -4,7 +4,6 @@
 #include <iomanip>
 #include <vector>
 #include <sstream>
-
 #include <thread>
 #include <chrono>
 #include <cstdio>
@@ -27,14 +26,15 @@ struct partitions {
 };
 
 map<int, unique_ptr<mutex>> mutex_map;
+int difference = 1, max_difference = 1;
 
-void rank_distribution(AdjacencyList& graph, vector<partitions> thread_distribution) {
+void rank_distribution(AdjacencyList& graph, partitions part) {
     graph.set_vertex_rank(0,0);
     vector <bool> discovered_vertex (graph.vertex_path_cost.size(), false);
-    int difference = 1, max_difference = 1;
+    // int difference = 1, max_difference = 1;
     while (max_difference > 0) {
         max_difference = 0;
-        for (int i = 0; i < graph.outgoing_edges.size(); i++) {
+        for (int i = part.l_bound; i < part.r_bound; i++) {
             for_each(graph.outgoing_edges[i].begin(), graph.outgoing_edges[i].end(), [&](int &j) {
                 int curr_path_cost = graph.vertex_path_cost.at(j);
                 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
         mutex_map.emplace(0, make_unique<mutex>()).first;
         
-        rank_distribution(graph, thread_distribution);
+        rank_distribution(graph, thread_distribution.at(0));
         graph.print_vertex_ranks();
         return 0;
     }
@@ -107,16 +107,18 @@ int main(int argc, char *argv[]) {
                 edges_dist += num_edges - 1;
             }
             
+            cout << "\n Thread " << i << " Started \n";
             mutex_map.emplace(i, make_unique<mutex>()).first;
-            threads[i] = thread(rank_distribution, ref(graph), thread_distribution);
+            threads[i] = thread(rank_distribution, ref(graph), thread_distribution.at(i));
         }
     }
     
-    // for(int iter = 0; iter < thread_distribution.size(); iter++) {
-    //     cout << "\n Thread Num: " << iter
-    //          << "\t" << thread_distribution.at(iter).l_bound
-    //          << "\t" << thread_distribution.at(iter).r_bound;
-    // }
+    for(int iter = 0; iter < thread_distribution.size(); iter++) {
+        cout << "\n Thread Num: " << iter
+             << "\t" << thread_distribution.at(iter).l_bound
+             << "\t" << thread_distribution.at(iter).r_bound;
+    }
+    cout << "\n\n";
     
     if(num_threads != 1)
         for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
