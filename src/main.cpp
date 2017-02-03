@@ -46,20 +46,17 @@ void rank_distribution(AdjacencyList& graph, partitions part) {
                 
                 if (j == 0) return;
                 
-                (*(mutex_map_edge.at(j))).lock();
                 if (discovered_vertex.at(j) == false && graph.vertex_path_cost.at(i) != INT_MAX) {
-                    graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
                     lock_guard<mutex> lock(*(mutex_map_vertex.at(j)));
+                    graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
                     discovered_vertex.at(j) = true;
                     
                 }
-                (*(mutex_map_edge.at(j))).unlock();
                 
-                (*(mutex_map_edge.at(j))).lock();
                 else if (discovered_vertex.at(j) == true && graph.vertex_path_cost.at(i) + 1 <= curr_path_cost) {
+                    lock_guard<mutex> lock(*(mutex_map_vertex.at(j)));
                     graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
                 }
-                (*(mutex_map_edge.at(j))).unlock();
                 
                 difference_mutex.lock();
                 difference = abs(curr_path_cost - graph.vertex_path_cost.at(j));
