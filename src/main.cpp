@@ -25,45 +25,48 @@ struct partitions {
     int r_bound;
 };
 
-map<int, unique_ptr<mutex>> mutex_map_edge;
-map<int, unique_ptr<mutex>> mutex_map_vertex;
+deque<mutex> mutex_map_edge;
+deque<mutex> mutex_map_vertex;
 vector <bool> discovered_vertex;
 
 int difference = 1, max_difference = 1;
+int iterations = 0;
 mutex difference_mutex, max_difference_mutex;
 
 void rank_distribution(AdjacencyList& graph, partitions part) {
     graph.set_vertex_rank(0,0);
-    // int difference = 1, max_difference = 1;
     while (max_difference > 0) {
         max_difference = 0;
         for (int i = part.l_bound; i < part.r_bound; i++) {
             for_each(graph.outgoing_edges[i].begin(), graph.outgoing_edges[i].end(), [&](int &j) {
-                
-                (*(mutex_map_edge.at(j))).lock();
+                iterations++;
+                mutex_map_edge.at(j).lock();
                 int curr_path_cost = graph.vertex_path_cost.at(j);
-                (*(mutex_map_edge.at(j))).unlock();
+                mutex_map_edge.at(j).unlock();
                 
                 if (j == 0) return;
                 
-                if (discovered_vertex.at(j) == false && graph.vertex_path_cost.at(i) != INT_MAX) {
-                    lock_guard<mutex> lock(*(mutex_map_vertex.at(j)));
-                    graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
-                    discovered_vertex.at(j) = true;
+                {
+                    // lock(mutex_map_vertex.at(j), mutex_map_edge.at(i));
+                    lock_guard<mutex> lock1(mutex_map_vertex.at(j));
+                    lock_guard<mutex> lock2(mutex_map_edge.at(i));
+                    if (discovered_vertex.at(j) == false && graph.vertex_path_cost.at(i) != INT_MAX) {
+                        graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
+                        discovered_vertex.at(j) = true;
+                    }
                     
+                    else if (discovered_vertex.at(j) == true && graph.vertex_path_cost.at(i) + 1 <= curr_path_cost) {
+                        graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
+                    }
                 }
                 
-                else if (discovered_vertex.at(j) == true && graph.vertex_path_cost.at(i) + 1 <= curr_path_cost) {
-                    lock_guard<mutex> lock(*(mutex_map_vertex.at(j)));
-                    graph.set_vertex_rank(j, graph.vertex_path_cost.at(i) + 1);
-                }
-                
-                difference_mutex.lock();
-                difference = abs(curr_path_cost - graph.vertex_path_cost.at(j));
-                difference_mutex.unlock();
-                if (difference > max_difference) {
-                    lock_guard<mutex> lock(max_difference_mutex);
-                    max_difference = difference;
+                {
+                    lock_guard<mutex> lock1(difference_mutex);
+                    lock_guard<mutex> lock2(max_difference_mutex);
+                    difference = abs(curr_path_cost - graph.vertex_path_cost.at(j));
+                    if (difference > max_difference) {
+                        max_difference = difference;
+                    }
                 }
             });
         }
@@ -97,6 +100,8 @@ int main(int argc, char *argv[]) {
     
     vector<partitions> thread_distribution(num_threads);
     vector<thread> threads(num_threads);
+    mutex_map_edge.resize(graph.vertex_path_cost.size());
+    mutex_map_vertex.resize(graph.vertex_path_cost.size());
     discovered_vertex.resize(graph.vertex_path_cost.size(), false);
     
     if (num_threads == 1) {
@@ -137,5 +142,6 @@ int main(int argc, char *argv[]) {
     
     graph.print_vertex_ranks();
     
+    cout << "\nNumber of iterations: " << iterations << endl;
     return 0;
 }

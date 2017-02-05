@@ -31,6 +31,8 @@ AdjacencyList::AdjacencyList(string dataset) {
         
         insert_edge(src, dst);
     }
+    
+    
 }
 
 AdjacencyList::~AdjacencyList() { }
@@ -74,8 +76,6 @@ void AdjacencyList::insert_edge(int src, int dst) {
     
     incoming_edges.at(dst).push_back(src);
     outgoing_edges.at(src).push_back(dst);
-    mutex_map_edge.emplace(temp, make_unique<mutex>()).first;
-    mutex_map_vertex.emplace(temp, make_unique<mutex>()).first;
 }
 
 // static reference function, reference to ostream
