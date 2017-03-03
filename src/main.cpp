@@ -39,6 +39,7 @@ void update_vertex(AdjacencyList& graph, partitions part) {
             if (j == 0) return;
             
             mutex_map_weight.at(i).lock();
+            
             if (graph.vertex_weight.at(j) == INT_MAX && graph.vertex_weight.at(i) != INT_MAX) {
                 graph.vertex_weight.at(j) = graph.vertex_weight.at(i) + 1;
                 graph.vertex_weight.at(j) = INT_MAX - 1;
@@ -46,17 +47,20 @@ void update_vertex(AdjacencyList& graph, partitions part) {
             else if (graph.vertex_weight.at(j) != INT_MAX && graph.vertex_weight.at(i) + 1 <= initial) {
                 graph.vertex_weight.at(j) = graph.vertex_weight.at(i) + 1;
             }
+            
             mutex_map_weight.at(i).unlock();
+            
             difference = abs(initial - graph.vertex_weight.at(j));
+            
             mutex_map_weight.at(j).unlock();
+            
             if (difference > part.max_difference) {
                 part.max_difference = difference;
             }
-            
-            lock_guard<mutex> lock(mutex_difference);
-            if (part.max_difference > g_max_difference) {
-                g_max_difference = part.max_difference;
-            }
+        }
+        lock_guard<mutex> lock(mutex_difference);
+        if (part.max_difference > g_max_difference) {
+            g_max_difference = part.max_difference;
         }
     }
 }
@@ -66,8 +70,10 @@ void shortest_path(AdjacencyList& graph, partitions part) {
     
     do {
         update_vertex(graph, part);
+        
         cout << "g_max_difference: " << g_max_difference << endl;
         graph.print_vertex_ranks();
+        
         int rc = pthread_barrier_wait (&barrier);
         if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
             cout << "Could not wait on barrier.\n";
@@ -107,11 +113,13 @@ int main(int argc, char * argv[]) {
     
     vector<partitions> thread_distribution(num_threads);
     vector<thread> threads(num_threads);
+    
     pthread_barrier_init (&barrier, NULL, num_threads);
     
     mutex_map_weight.resize(graph.vertex_weight.size());
     
-    if(num_threads == 0) {
+    if(num_threads == 1) {
+        thread_distribution.at(0).l_bound = 0;
         thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
         
         shortest_path(graph, thread_distribution.at(0));
@@ -146,6 +154,7 @@ int main(int argc, char * argv[]) {
     cout << "\n\n";
     cout << "Sleeping thread...\n";
     this_thread::sleep_for(2s);
+    cout << "Thread woke up...\n";
 
     if(num_threads != 1)
         for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
