@@ -12,6 +12,7 @@ class AdjacencyList {
         vector <vector<int>> outgoing_edges;
         vector <int> vertex_weight;
         
+        void insert_edge(const int src, const int dst);
         void print_vertex_ranks();
     
     public:

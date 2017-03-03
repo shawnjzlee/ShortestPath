@@ -28,7 +28,7 @@ int g_max_difference = 1;
 
 void update_vertex(AdjacencyList& graph, partitions part) {
     int initial, difference = 1;
-    part.max_difference = 0, g_max_difference = 0;
+    part.max_difference = 0;
     
     for (int i = part.l_bound; i < part.r_bound; i++) {
         for (int j = 0; j < graph.outgoing_edges.at(i).size(); j++) {
@@ -52,11 +52,12 @@ void update_vertex(AdjacencyList& graph, partitions part) {
             if (difference > part.max_difference) {
                 part.max_difference = difference;
             }
+            
+            lock_guard<mutex> lock(mutex_difference);
+            if (part.max_difference > g_max_difference) {
+                g_max_difference = part.max_difference;
+            }
         }
-    }
-    lock_guard<mutex> lock(mutex_difference);
-    if (part.max_difference > g_max_difference) {
-        g_max_difference = part.max_difference;
     }
 }
 
@@ -65,14 +66,15 @@ void shortest_path(AdjacencyList& graph, partitions part) {
     
     do {
         update_vertex(graph, part);
-        
+        cout << "g_max_difference: " << g_max_difference << endl;
+        graph.print_vertex_ranks();
         int rc = pthread_barrier_wait (&barrier);
         if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
             cout << "Could not wait on barrier.\n";
             exit(-1);
         }
     } while (g_max_difference > 0);
-    
+    cout << "Thread " << part.thread_id << " exited.\n" << endl;
 }
 
 
@@ -142,7 +144,9 @@ int main(int argc, char * argv[]) {
     }
     
     cout << "\n\n";
-    
+    cout << "Sleeping thread...\n";
+    this_thread::sleep_for(2s);
+
     if(num_threads != 1)
         for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
     
