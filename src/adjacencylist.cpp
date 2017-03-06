@@ -1,6 +1,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+<<<<<<< HEAD
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -15,6 +16,17 @@ using namespace std;
 AdjacencyList::AdjacencyList() {  }
 
 AdjacencyList::AdjacencyList(string dataset) {
+=======
+#include <climits>
+#include <iostream>
+
+#include "adjacencylist.h"
+// #include "global.h"
+
+using namespace std;
+
+AdjacencyList::AdjacencyList(const string dataset) {
+>>>>>>> rewrite
     ifstream instream;
     instream.open(dataset.c_str());
     if(!instream.is_open()) {
@@ -22,15 +34,22 @@ AdjacencyList::AdjacencyList(string dataset) {
     }
     
     string line;
+<<<<<<< HEAD
 
     int src, dst;
     while(getline(instream, line)) {
         if(line.at(0) == '#') continue;
+=======
+    int src, dst;
+    while(getline(instream, line)) {
+        if (line.at(0) == '#') continue;
+>>>>>>> rewrite
         stringstream ss(line);
         ss >> src >> dst;
         
         insert_edge(src, dst);
     }
+<<<<<<< HEAD
     
     
 }
@@ -56,6 +75,8 @@ void AdjacencyList::set_vertex_rank(int index, int rank) {
 
 void AdjacencyList::set_vertex_rank(int index, function<double ()> const &calculate_rank) {
     vertex_path_cost.at(index) = calculate_rank();
+=======
+>>>>>>> rewrite
 }
 
 void AdjacencyList::insert_edge(int src, int dst) {
@@ -66,18 +87,27 @@ void AdjacencyList::insert_edge(int src, int dst) {
     if(incoming_edges.empty()) {
         incoming_edges.resize(temp + 1, vector<int>());
         outgoing_edges.resize(temp + 1, vector<int>());
+<<<<<<< HEAD
         vertex_path_cost.resize(temp + 1, INT_MAX);
+=======
+        vertex_weight.resize(temp + 1, INT_MAX);
+>>>>>>> rewrite
     } 
     else if (incoming_edges.size() <= src || incoming_edges.size() <= dst) {
         incoming_edges.resize(temp + 1, vector<int>());
         outgoing_edges.resize(temp + 1, vector<int>());
+<<<<<<< HEAD
         vertex_path_cost.resize(temp + 1, INT_MAX);
+=======
+        vertex_weight.resize(temp + 1, INT_MAX);
+>>>>>>> rewrite
     }
     
     incoming_edges.at(dst).push_back(src);
     outgoing_edges.at(src).push_back(dst);
 }
 
+<<<<<<< HEAD
 // static reference function, reference to ostream
 void AdjacencyList::print_list() {
     //reference to ostream
@@ -107,5 +137,10 @@ void AdjacencyList::print_one_outgoing_list(int index) {
 void AdjacencyList::print_vertex_ranks() {
     for(int i = 0; i < vertex_path_cost.size(); i++)
         cout << i << "\t" << vertex_path_cost.at(i) << endl;
+=======
+void AdjacencyList::print_vertex_ranks() {
+    for(int i = 0; i < vertex_weight.size(); i++)
+        cout << i << "\t" << vertex_weight.at(i) << endl;
+>>>>>>> rewrite
     cout << endl;
 }

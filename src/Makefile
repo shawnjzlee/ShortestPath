@@ -3,7 +3,7 @@ CFLAGS=-c -std=c++14
 LDFLAGS=-pthread -lpthread
 SOURCES=main.cpp adjacencylist.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=pagerank
+EXECUTABLE=sssp
 BUILD_DIR=./bin
 
 all: $(SOURCES) $(EXECUTABLE)
