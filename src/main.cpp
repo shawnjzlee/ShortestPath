@@ -7,6 +7,7 @@
 #include <deque>
 #include <climits>
 #include <iostream>
+#include <tuple>
 
 #include "adjacencylist.h"
 
@@ -16,33 +17,36 @@ using namespace std::chrono;
 struct partitions {
     int l_bound = 0;
     int r_bound = 0;
-    int max_difference = 0;
+    int max_difference = 1;
     short thread_id;
 };
 
+vector<bool> converged;
 deque<mutex> mutex_map_weight;
 mutex mutex_difference;
 pthread_barrier_t barrier;
 
 int g_max_difference = 1;
 
-void update_vertex(AdjacencyList& graph, partitions part) {
-    int initial, difference = 1;
-    part.max_difference = 0;
+void update_vertex(AdjacencyList& graph, partitions& part, int& difference) {
     
-    for (int i = part.l_bound; i < part.r_bound; i++) {
-        for (int j = 0; j < graph.outgoing_edges.at(i).size(); j++) {
+    for (int i = part.l_bound; i <= part.r_bound; i++) {
+        for_each(graph.outgoing_edges[i].begin(), graph.outgoing_edges[i].end(), [&](int &j) {
             
             mutex_map_weight.at(j).lock();
-            initial = graph.vertex_weight.at(j);
             
-            if (j == 0) return;
+            cout << "i, j: " << i << "\t" << j << endl;
+            int initial = graph.vertex_weight.at(j);
+            
+            if (j == 0) {
+                mutex_map_weight.at(j).unlock();
+                return;
+            }
             
             mutex_map_weight.at(i).lock();
             
             if (graph.vertex_weight.at(j) == INT_MAX && graph.vertex_weight.at(i) != INT_MAX) {
                 graph.vertex_weight.at(j) = graph.vertex_weight.at(i) + 1;
-                graph.vertex_weight.at(j) = INT_MAX - 1;
             }
             else if (graph.vertex_weight.at(j) != INT_MAX && graph.vertex_weight.at(i) + 1 <= initial) {
                 graph.vertex_weight.at(j) = graph.vertex_weight.at(i) + 1;
@@ -54,32 +58,31 @@ void update_vertex(AdjacencyList& graph, partitions part) {
             
             mutex_map_weight.at(j).unlock();
             
-            if (difference > part.max_difference) {
+            if (difference < part.max_difference) {
                 part.max_difference = difference;
             }
-        }
-        lock_guard<mutex> lock(mutex_difference);
-        if (part.max_difference > g_max_difference) {
-            g_max_difference = part.max_difference;
-        }
+        });
     }
 }
 
-void shortest_path(AdjacencyList& graph, partitions part) {
+void shortest_path(AdjacencyList& graph, partitions part, int num_threads) {
     graph.vertex_weight.at(0) = 0;
     
+    int difference = 1;
+    
     do {
-        update_vertex(graph, part);
+        update_vertex(graph, part, difference);
         
-        cout << "g_max_difference: " << g_max_difference << endl;
-        graph.print_vertex_ranks();
+        if (part.max_difference < g_max_difference) {
+            converged.at(part.thread_id) = true;
+        }        
         
         int rc = pthread_barrier_wait (&barrier);
         if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
             cout << "Could not wait on barrier.\n";
             exit(-1);
         }
-    } while (g_max_difference > 0);
+    } while ((part.max_difference > 0) && !all_of(converged.begin(), converged.end(), [](bool v) { return v; }));
     cout << "Thread " << part.thread_id << " exited.\n" << endl;
 }
 
@@ -113,6 +116,7 @@ int main(int argc, char * argv[]) {
     
     vector<partitions> thread_distribution(num_threads);
     vector<thread> threads(num_threads);
+    converged.resize(num_threads);
     
     pthread_barrier_init (&barrier, NULL, num_threads);
     
@@ -122,7 +126,8 @@ int main(int argc, char * argv[]) {
         thread_distribution.at(0).l_bound = 0;
         thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
         
-        shortest_path(graph, thread_distribution.at(0));
+        cout << "Thread 0 started.\n";
+        shortest_path(graph, thread_distribution.at(0), num_threads);
         graph.print_vertex_ranks();
         return 0;
     }
@@ -140,21 +145,18 @@ int main(int argc, char * argv[]) {
                 edges_distributed += num_edges - 1;
             }
             
-            cout << "\n Thread " << i << " started.\n";
-            threads[i] = thread(shortest_path, ref(graph), thread_distribution.at(i));
+            // cout << "\n Thread " << i << " started.\n";
+            threads[i] = thread(shortest_path, ref(graph), thread_distribution.at(i), num_threads);
         }
     }
     
-    for(int iter = 0; iter < thread_distribution.size(); iter++) {
-        cout << "\n Thread Num: " << thread_distribution.at(iter).thread_id
-             << "\t" << thread_distribution.at(iter).l_bound
-             << "\t" << thread_distribution.at(iter).r_bound;
-    }
+    // for(int iter = 0; iter < thread_distribution.size(); iter++) {
+    //     cout << "\n Thread Num: " << thread_distribution.at(iter).thread_id
+    //          << "\t" << thread_distribution.at(iter).l_bound
+    //          << "\t" << thread_distribution.at(iter).r_bound;
+    // }
     
     cout << "\n\n";
-    cout << "Sleeping thread...\n";
-    this_thread::sleep_for(2s);
-    cout << "Thread woke up...\n";
 
     if(num_threads != 1)
         for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
