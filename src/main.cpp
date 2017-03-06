@@ -23,10 +23,7 @@ struct partitions {
 
 vector<bool> converged;
 deque<mutex> mutex_map_weight;
-mutex mutex_difference;
 pthread_barrier_t barrier;
-
-int g_max_difference = 1;
 
 void update_vertex(AdjacencyList& graph, partitions& part, int& difference) {
     
@@ -35,7 +32,7 @@ void update_vertex(AdjacencyList& graph, partitions& part, int& difference) {
             
             mutex_map_weight.at(j).lock();
             
-            cout << "i, j: " << i << "\t" << j << endl;
+            // cout << "i, j: " << i << "\t" << j << endl;
             int initial = graph.vertex_weight.at(j);
             
             if (j == 0) {
@@ -73,17 +70,16 @@ void shortest_path(AdjacencyList& graph, partitions part, int num_threads) {
     do {
         update_vertex(graph, part, difference);
         
-        if (part.max_difference < g_max_difference) {
-            converged.at(part.thread_id) = true;
-        }        
+        if (part.max_difference == 0) converged.at(part.thread_id) = true;
         
         int rc = pthread_barrier_wait (&barrier);
         if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
             cout << "Could not wait on barrier.\n";
             exit(-1);
         }
-    } while ((part.max_difference > 0) && !all_of(converged.begin(), converged.end(), [](bool v) { return v; }));
-    cout << "Thread " << part.thread_id << " exited.\n" << endl;
+    } while ((part.max_difference > 0) && 
+             !all_of(converged.begin(), converged.end(), [](bool v) { return v; }));
+    // cout << "Thread " << part.thread_id << " exited.\n" << endl;
 }
 
 
