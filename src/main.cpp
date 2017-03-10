@@ -22,6 +22,7 @@ struct partitions {
 };
 
 vector<bool> converged;
+mutex mutex_converged;
 deque<mutex> mutex_map_weight;
 pthread_barrier_t barrier;
 
@@ -62,24 +63,31 @@ void update_vertex(AdjacencyList& graph, partitions& part, int& difference) {
     }
 }
 
-void shortest_path(AdjacencyList& graph, partitions part, int num_threads) {
+void shortest_path(AdjacencyList& graph, partitions part) {
     graph.vertex_weight.at(0) = 0;
     
     int difference = 1;
     
-    do {
+    while ((part.max_difference > 0) && 
+            !all_of(converged.begin(), converged.end(), [](bool v) { return v; })) {
+                
+        fill(converged.begin(), converged.end(), false);
+                
         update_vertex(graph, part, difference);
-        
-        if (part.max_difference == 0) converged.at(part.thread_id) = true;
-        
+
         int rc = pthread_barrier_wait (&barrier);
         if (rc != 0 && rc != PTHREAD_BARRIER_SERIAL_THREAD) {
             cout << "Could not wait on barrier.\n";
             exit(-1);
         }
-    } while ((part.max_difference > 0) && 
-             !all_of(converged.begin(), converged.end(), [](bool v) { return v; }));
-    // cout << "Thread " << part.thread_id << " exited.\n" << endl;
+        
+        lock_guard<mutex> lock(mutex_converged);
+        if (part.max_difference == 0) converged.at(part.thread_id) = true; 
+        
+        cout << !all_of(converged.begin(), converged.end(), [](bool v) { return v; } ) << endl;        
+        
+    }
+    cout << "Thread " << part.thread_id << " exited.\n" << endl;
 }
 
 
@@ -123,7 +131,7 @@ int main(int argc, char * argv[]) {
         thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
         
         cout << "Thread 0 started.\n";
-        shortest_path(graph, thread_distribution.at(0), num_threads);
+        shortest_path(graph, thread_distribution.at(0));
         graph.print_vertex_ranks();
         return 0;
     }
@@ -142,7 +150,7 @@ int main(int argc, char * argv[]) {
             }
             
             // cout << "\n Thread " << i << " started.\n";
-            threads[i] = thread(shortest_path, ref(graph), thread_distribution.at(i), num_threads);
+            threads[i] = thread(shortest_path, ref(graph), thread_distribution.at(i));
         }
     }
     
@@ -152,7 +160,7 @@ int main(int argc, char * argv[]) {
     //          << "\t" << thread_distribution.at(iter).r_bound;
     // }
     
-    cout << "\n\n";
+    // cout << "\n\n";
 
     if(num_threads != 1)
         for_each(threads.begin(), threads.end(), mem_fn(&thread::join));
