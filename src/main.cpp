@@ -68,10 +68,16 @@ void shortest_path(AdjacencyList& graph, partitions part) {
     
     int difference = 1;
     
-    while ((part.max_difference > 0) && 
-            !all_of(converged.begin(), converged.end(), [](bool v) { return v; })) {
-                
-        fill(converged.begin(), converged.end(), false);
+    while (1) {
+        
+        mutex_converged.lock();
+        
+        if (part.max_difference <= 0 || all_of(converged.begin(), converged.end(), [](bool v) { return v; })) {
+            mutex_converged.unlock();
+            return;
+        }
+        
+        // fill(converged.begin(), converged.end(), false);
                 
         update_vertex(graph, part, difference);
 
@@ -81,8 +87,9 @@ void shortest_path(AdjacencyList& graph, partitions part) {
             exit(-1);
         }
         
-        lock_guard<mutex> lock(mutex_converged);
+        mutex_converged.lock();
         if (part.max_difference == 0) converged.at(part.thread_id) = true; 
+        mutex_converged.unlock();
         
         cout << !all_of(converged.begin(), converged.end(), [](bool v) { return v; } ) << endl;        
         
