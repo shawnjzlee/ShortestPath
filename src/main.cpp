@@ -25,6 +25,7 @@ vector<bool> converged;
 vector<bool> discovered_vertex;
 deque<mutex> mutex_converged;
 deque<mutex> mutex_map_weight;
+mutex mutex_v_converged;
 pthread_barrier_t barrier;
 
 void update_vertex(AdjacencyList& graph, partitions& part, int& difference) {
@@ -71,14 +72,6 @@ void shortest_path(AdjacencyList& graph, partitions part) {
     int difference = 1;
     
     while (1) {
-        
-        mutex_converged.at(part.thread_id).lock();
-        if (part.max_difference <= 0 || all_of(converged.begin(), converged.end(), [](bool v) { return v; })) {
-            mutex_converged.at(part.thread_id).unlock();
-            return;
-        }
-        mutex_converged.at(part.thread_id).unlock();
-        
         // fill(converged.begin(), converged.end(), false);
                 
         update_vertex(graph, part, difference);
@@ -94,6 +87,12 @@ void shortest_path(AdjacencyList& graph, partitions part) {
         mutex_converged.at(part.thread_id).unlock();
         
         // cout << !all_of(converged.begin(), converged.end(), [](bool v) { return v; } ) << endl;        
+        
+        lock_guard<mutex> lock(mutex_v_converged);
+        if (part.max_difference <= 0 || all_of(converged.begin(), converged.end(), [](bool v) { return v; })) {
+            // mutex_converged.at(part.thread_id).unlock();
+            return;
+        }
         
     }
     cout << "Thread " << part.thread_id << " exited.\n" << endl;
