@@ -22,7 +22,7 @@ struct partitions {
 };
 
 vector<bool> converged;
-mutex mutex_converged;
+deque<mutex> mutex_converged;
 deque<mutex> mutex_map_weight;
 pthread_barrier_t barrier;
 
@@ -70,12 +70,12 @@ void shortest_path(AdjacencyList& graph, partitions part) {
     
     while (1) {
         
-        mutex_converged.lock();
-        
+        mutex_converged.at(part.thread_id).lock();
         if (part.max_difference <= 0 || all_of(converged.begin(), converged.end(), [](bool v) { return v; })) {
-            mutex_converged.unlock();
+            mutex_converged.at(part.thread_id).unlock();
             return;
         }
+        mutex_converged.at(part.thread_id).unlock();
         
         // fill(converged.begin(), converged.end(), false);
                 
@@ -87,9 +87,9 @@ void shortest_path(AdjacencyList& graph, partitions part) {
             exit(-1);
         }
         
-        mutex_converged.lock();
+        mutex_converged.at(part.thread_id).lock();
         if (part.max_difference == 0) converged.at(part.thread_id) = true; 
-        mutex_converged.unlock();
+        mutex_converged.at(part.thread_id).unlock();
         
         cout << !all_of(converged.begin(), converged.end(), [](bool v) { return v; } ) << endl;        
         
@@ -132,7 +132,7 @@ int main(int argc, char * argv[]) {
     pthread_barrier_init (&barrier, NULL, num_threads);
     
     mutex_map_weight.resize(graph.vertex_weight.size());
-    
+    mutex_converged.resize(num_threads);
     if(num_threads == 1) {
         thread_distribution.at(0).l_bound = 0;
         thread_distribution.at(0).r_bound = graph.incoming_edges.size() - 1;
